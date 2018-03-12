@@ -1,0 +1,129 @@
+;Cody Stockton
+;Cole Challand
+;Car code
+	List P=18F452				; Talking to the assembler, saying a process is about to begin
+	#include p18F452.inc			; modle of programmer
+cblock 0x20					; List of variables
+		blink 				; variable for loopcount for a delay before the car moves
+ 		ledoff				; variable for turning and delay
+		loopcount			; Variable for the larger loopcount before skiping and moving to the next step
+		loopcount2			; Variable for the smaller loopcount for the motor
+		delay4ms			; Delay time for turning
+		right				; turn right for the car
+		left				; turn left for the car
+		go				; move foward for the motor
+		stop				; stops the motor
+		neutral				; Variable for motor's neutral
+		delay5s				; delay 1.5ms for the motor for neutral
+
+endc						; End defining variables
+
+		org 0x40			; addressing variables
+		clrf TRISD			; Clear all of port D
+		movlw b'00000111'		; Move literal to workplace, the binary number 7 which turns the car right
+		movwf right			; stores the number in the varriable right
+		movlw b'00001000' 		; Move literal to workplace, the binary number 8 which turns the car left
+		movwf left 			; stores the number in the varriable left
+		movlw b'1100101'		; move literal to workplace, the binary number 197 which creates a 20ms delay
+		movwf ledoff			; stores the number in the varriable ledoff
+		movlw b'00100010' 		; move literal to workplace, the binary number 36 which creates a 4ms delay
+		movwf delay4ms 			; stores he number in the varriable delay4ms
+		movlw b'00011101' 		; move literal to workplace, the binary number 15 where puts the motor in neutral
+		movwf neutral 			; stores the number in the varriable neutral
+		movlw b'11111010' 		; move literal to workplace, the binary number 250 which creates a 5s delay
+		movwf delay5s 			; stores value in varriable delay5ms
+		movlw b'00011111' 		; move literal to workplace, the binary number 31 where puts the motor in a forward state
+		movwf go 			; stores the number in the varriable go
+
+
+		clrf TRISD 			; Clear all of port D
+		call Neutral 			; Putting the motor in neutral
+repeat		nop 				; Clear systems operations
+		call usf 			; Activate front ultrasound sensors
+		call Motor 			; Putting the motor in drive
+		call uss 			; Activate side ultrasound sensors
+		call turn 			; Avtivate servo motor
+		bra repeat 			; repeat code
+
+Delay		nop				; No Operation
+Again2		movlw b'01000000'		; move literal to workplace, the binary number 200
+		movwf blink			; stores the number in the varriable blink
+Again		decfsz blink			; Subtract one from blink and skip it f is zero and moves to the next command
+		bra Again			; unconditiionally returns to Again
+		decfsz loopcount		; Subtracts one from loopcount and skips if f is zero and moves to the next command
+		bra Again2			; unconditiionally returns to Again2
+		return				; Returns from subroutine
+
+Delay2		nop				; No Operation
+Again4		movlw b'00010000'		; move literal to workplace, the binary number 50
+		movwf blink			; stores the number in the varriable blink
+Again3		decfsz blink			; Subtract one from blink and skip it f is zero and moves to the next command
+		bra Again3			; unconditiionally returns to Again3
+		decfsz loopcount2		; Subtract one from loopcount and skip it f is zero and moves to the next command
+		bra Again4			; unconditiionally returns to Again4
+		return				; Returns from subroutine
+
+uss 		nop				; No Operation
+		clrf TRISD			; Clear all of port D
+		movlw b'00000010'		; Move literal to workplace, the binary number 2 which sends the 5volt signal to the 2nd bit in PORTD
+		movwf PORTD			; stores the number in the PORTD
+		clrf PORTD			; Clear port D, so we can send out a short signal
+		movlw b'00000010'		; Move literal to workplace, the binary number 2 which sends the 5volt signal to the 2nd bit in PORTD to listen to the ultrasound
+		movwf TRISD			; stores the number in the varriable TRISD
+		movff delay4ms,loopcount	; Moving the varriable delay4ms into loopcount to create a loop
+		call Delay			; Waiting for an amount of time to recieve a signal
+		movff right,loopcount		; Making a decision on whether to turn right or not
+		movlw b'00000010'		; The binary number of which the signal will be compared too
+		CPFSEQ PORTD			; Skip if it is equal to 2 feet from the wall and go left
+		movff left,loopcount		; Making a decision to loop right or to turn left
+		return				; Returns from subroutine
+		
+turn		nop				; No Operation
+		movlw b'00000100'		; Move literal to workplace, the binary number 3 which sends the 5volt signal to the 3nd bit in PORTD
+		movwf PORTD			; stores the number in the varriable PORTD
+		call Delay			; Waiting for an amount of time to recieve a signal
+		clrf PORTD			; Clear port D, so we can send out a short signal
+		movff ledoff,loopcount		; Move from the constant ledoff to the variable loopcount to create a loop by which continues the stearing 
+		call Delay			; Waiting for an amount of time to recieve a signal
+		return				; Returns from subroutine
+
+usf		nop				; No Operation
+		clrf TRISD			; Clear all of port D
+		movlw b'00000001'		; Move literal to workplace, the binary number 1 which sends the 5volt signal to the 1nd bit in PORTD
+		movwf PORTD			; stores the number in the varriable PORTD
+		clrf PORTD			; Clear port D, so we can send out a short signal
+		movlw b'00000001'		; Move literal to workplace, the binary number 1 which sends the 5volt signal to the 1nd bit in PORTD to listen to the ultrasound
+		movwf TRISD			; stores the number in the varriable TRISD
+		movff delay4ms,loopcount	; Moving the varriable delay4ms into loopcount to create a loop
+		call Delay			; Waiting for an amount of time to recieve a signal
+		movlw b'00000001'		; The binary number of which the signal will be compared 
+		movff go,loopcount2		; Moving the varriable go into loopcount2 to create a loop for the motor to go
+		CPFSEQ PORTD			; Skip if it is equal to 2 feet from the wall
+		movff neutral,loopcount2	; Moving the varriable neutral into loopcount2 to create a loop for the distance to stop before the wall
+		return				; Returns from subroutine
+
+Neutral		nop				; No Operation
+Again5		movlw b'00001000'		; Move literal to workplace, the binary number 4 which sends the 5volt signal to the 4nd bit in PORTD
+		movwf PORTD			; stores the number in the varriable PORTD
+		movff neutral,loopcount2	; Moving the varriable neutral into loopcount2 so that there is 1.5ms pulse for the motor's neutral state 
+		call Delay2			; Waiting for an amount of time before having a delay of 20ms
+		clrf PORTD			; Clear all of port D
+		movff ledoff,loopcount		; Move from the constant ledoff to the variable loopcount to create a loop by which continues the motor's neutral state
+		call Delay			; Waiting for an amount of time to recieve a signal
+		decfsz delay5s			; Repeat 250 times so that the delay is 5 seconds total before the motor runs
+		bra Again5			; unconditiionally returns to Again5
+		return				; Returns from subroutine
+
+Motor		nop				; No Operation
+		movlw b'00001000'		; Move literal to workplace, the binary number 4 which sends the 5volt signal to the 4nd bit in PORTD
+		movwf PORTD			; stores the number in the varriable PORTD
+		call Delay2			; Waiting for an amount of time before having a delay of 20ms
+		clrf PORTD			; Clear all of port D
+		movff ledoff,loopcount		; Move from the constant ledoff to the variable loopcount to create a loop by which continues the motor's forward state
+		call Delay			; Waiting for an amount of time to recieve a signal
+		return				; Returns from subroutine
+		
+
+		
+
+end						; Telling the assembler to stop assembling
